@@ -1,0 +1,52 @@
+name: Crypto News Auto-Scraper
+
+on:
+  schedule:
+    # GitHub Actions Cron은 UTC 기준입니다.
+    # 한국 시간(KST) 오전 8시 = 전날 UTC 23:00
+    # 한국 시간(KST) 오후 5시 = 당일 UTC 08:00
+    - cron: '0 23 * * *'
+    - cron: '0 8 * * *'
+  
+  # 수동 실행 옵션 (테스트용)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape-and-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 저장소 체크아웃 (Checkout Repository)
+      uses: actions/checkout@v3
+
+    - name: Python 설정 (Set up Python)
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: 의존성 설치 (Install Dependencies)
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 뉴스 스크랩 실행 (Run Scraper)
+      run: python crypto_scraper.py
+
+    - name: 변경 사항 커밋 및 푸시 (Commit and Push)
+      run: |
+        git config --global user.name 'GitHub Action Bot'
+        git config --global user.email 'action@github.com'
+        git add ObsidianVault/News/Crypto/*.md
+        
+        # 변경 사항이 있을 때만 커밋
+        if git diff --staged --quiet; then
+          echo "No changes to commit."
+        else
+          git commit -m "📰 Auto-Update: Crypto News Briefing $(date +'%Y-%m-%d')"
+          git push
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
